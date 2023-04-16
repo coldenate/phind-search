@@ -3,26 +3,46 @@ import { useFetch, Response } from "@raycast/utils";
 import { useState } from "react";
 import { URLSearchParams } from "node:url";
 
+
+
+// create a request object that POSTs to this link https://www.phind.com/api/bing/search/
+
+// const request = new Request("https://www.phind.com/api/bing/search/", {
+//   method: "POST",
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+//   // body: JSON.stringify({
+//   //   q: "react",
+//   // }),
+// });
+
+// create a function that fetches a post request to "https://www.phind.com/api/bing/search/" with an input of the search query and returns the response object from the API. SUPPORT the const { data, isLoading }
+
 export default function Command() {
   const [searchText, setSearchText] = useState("");
-  const { data, isLoading } = useFetch(
-    "https://api.npms.io/v2/search?" +
-      // send the search query to the API
-      new URLSearchParams({ q: searchText.length === 0 ? "@raycast/api" : searchText }),
-    {
-      parseResponse: parseFetchResponse,
-    }
-  );
+  let data: any;
+
+  fetch("https://www.phind.com/api/bing/search/", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      q: searchText,
+    }),
+  })
+    .then((response) => {
+      data = response.json();
+    })
+    .then((data) => console.log(data));
+
+  data = parseFetchResponse(data);
 
   return (
-    <List
-      isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search npm packages..."
-      throttle
-    >
+    <List isLoading={true} onSearchTextChange={setSearchText} searchBarPlaceholder="Search Phind" throttle>
       <List.Section title="Results" subtitle={data?.length + ""}>
-        {data?.map((searchResult) => (
+        {data?.map((searchResult: SearchResult) => (
           <SearchListItem key={searchResult.name} searchResult={searchResult} />
         ))}
       </List.Section>
@@ -35,7 +55,6 @@ function SearchListItem({ searchResult }: { searchResult: SearchResult }) {
     <List.Item
       title={searchResult.name}
       subtitle={searchResult.description}
-      accessoryTitle={searchResult.username}
       actions={
         <ActionPanel>
           <ActionPanel.Section>
@@ -56,14 +75,12 @@ function SearchListItem({ searchResult }: { searchResult: SearchResult }) {
 
 /** Parse the response from the fetch query into something we can display */
 async function parseFetchResponse(response: Response) {
+  console.log(response.json());
   const json = (await response.json()) as
     | {
         results: {
-          package: {
+          suggestion: {
             name: string;
-            description?: string;
-            publisher?: { username: string };
-            links: { npm: string };
           };
         }[];
       }
@@ -75,10 +92,7 @@ async function parseFetchResponse(response: Response) {
 
   return json.results.map((result) => {
     return {
-      name: result.package.name,
-      description: result.package.description,
-      username: result.package.publisher?.username,
-      url: result.package.links.npm,
+      name: result.suggestion.name,
     } as SearchResult;
   });
 }
@@ -86,6 +100,5 @@ async function parseFetchResponse(response: Response) {
 interface SearchResult {
   name: string;
   description?: string;
-  username?: string;
   url: string;
 }
